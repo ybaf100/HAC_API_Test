@@ -23,9 +23,10 @@ $on_mod(Loaded) {
 
 namespace {
 struct ConsumerState {
-    // Retain only the overlay, not its scene. When the scene is destroyed,
-    // getParent() becomes null; raw label pointers stay owned by this node.
+    // Retain only the overlay, not its scene. Check the scene's weak lifetime
+    // before touching the parent pointer; labels stay owned by the overlay.
     Ref<CCNode> overlay;
+    WeakRef<CCScene> ownerScene;
     CCLabelBMFont* status = nullptr;
     CCLabelBMFont* statusShadow = nullptr;
     CCLabelBMFont* history = nullptr;
@@ -60,9 +61,17 @@ public:
     }
 
     bool ensureOverlay(CCScene* scene) {
-        if (consumerState().overlay && consumerState().overlay->getParent() == scene) return true;
-        if (consumerState().overlay) consumerState().overlay->removeFromParent();
+        auto oldScene = consumerState().ownerScene.lock();
+        if (oldScene == scene && consumerState().overlay &&
+            consumerState().overlay->getParent() == scene) return true;
+        // A retained child can outlive its former parent. Never call
+        // removeFromParent() through a pointer to an already-destroyed scene.
+        if (oldScene && consumerState().overlay &&
+            consumerState().overlay->getParent() == oldScene.data()) {
+            consumerState().overlay->removeFromParent();
+        }
         consumerState().overlay = nullptr;
+        consumerState().ownerScene = WeakRef<CCScene>();
         auto* root = CCNode::create();
         root->setID("hac-api-status-overlay"_spr);
         root->setAnchorPoint({0.0f, 0.0f});
@@ -74,6 +83,7 @@ public:
         if (!consumerState().status || !consumerState().statusShadow ||
             !consumerState().history || !consumerState().historyShadow) return false;
         consumerState().overlay = root;
+        consumerState().ownerScene = WeakRef<CCScene>(scene);
         // A scene child is screen-space: not attached to the moving game camera
         // or vanilla UILayer, and it does not consume touch/key input.
         scene->addChild(root, overlayZOrder);

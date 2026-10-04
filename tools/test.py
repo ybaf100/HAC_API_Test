@@ -42,6 +42,8 @@ def validate_sources():
     assert 'std::chrono::milliseconds(100)' in source
     assert 'steady_clock::now()' in source
     assert 'scene->addChild(root, overlayZOrder)' in source
+    assert 'WeakRef<CCScene> ownerScene' in source
+    assert 'ownerScene.lock()' in source
     assert 'CCDirector::drawScene();' in source
     assert 'm_fields->' not in source, "CCDirector is not a CCNode"
     assert set(p.name for p in (ROOT / "src").glob('*.cpp')) == {'main.cpp'}
