@@ -1,0 +1,68 @@
+name: Build HAC API consumer test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hac-api-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Consumer states and dependency contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 tools/test.py --sanitize
+
+  build:
+    name: ${{ matrix.target }} native consumer
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: Win64
+          - os: macos-latest
+            target: MacOS
+          - os: macos-latest
+            target: iOS
+          - os: ubuntu-latest
+            target: Android32
+          - os: ubuntu-latest
+            target: Android64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: geode-sdk/build-geode-mod@e26ece68d56a3cfa0a7f790d8120c965008c3d08
+        with:
+          sdk: given
+          target: ${{ matrix.target }}
+          combine: true
+          use-lto: false
+
+  package:
+    name: Validate standalone consumer package
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: geode-sdk/build-geode-mod/combine@e26ece68d56a3cfa0a7f790d8120c965008c3d08
+        id: combine
+        with:
+          delete-artifacts: false
+      - name: Check dependency and platform binaries
+        env:
+          BUILD_OUTPUT: ${{ steps.combine.outputs.build-output }}
+        run: python3 tools/check_package.py "$BUILD_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: HAC-API-Test-v1.0.0
+          path: ${{ steps.combine.outputs.build-output }}/hwanhee1.hac-api-test.geode
+          if-no-files-found: error

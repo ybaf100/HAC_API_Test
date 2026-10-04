@@ -1,0 +1,24 @@
+{
+  "geode": "5.8.2",
+  "gd": {
+    "win": "2.2081",
+    "mac": "2.2081",
+    "android": "2.2081",
+    "ios": "2.2081"
+  },
+  "id": "hwanhee1.hac-api-test",
+  "name": "HAC API Test",
+  "version": "v1.0.0",
+  "developer": "hwanhee1",
+  "description": "A separate HAC API consumer that displays current hack status in the top-right corner.",
+  "links": {
+    "source": "https://github.com/ybaf100/HAC_API_Test"
+  },
+  "dependencies": {
+    "hwanhee1.hac": {
+      "version": ">=v1.0.0",
+      "required": true
+    }
+  },
+  "tags": ["developer", "utility", "interface"]
+}
